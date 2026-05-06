@@ -1,0 +1,82 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id           String   @id @db.Char(36)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @db.VarChar(255)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Artwork {
+  id                String         @id @db.Char(36)
+  title             String?        @db.VarChar(200)
+  titleUnknown      Boolean        @default(false) @map("title_unknown")
+  artistName        String?        @map("artist_name") @db.VarChar(160)
+  artistId          String?        @map("artist_id") @db.Char(36)
+  description       String?        @db.Text
+  medium            String?        @db.VarChar(120)
+  mediumPreset      String?        @map("medium_preset") @db.VarChar(120)
+  mediumCustom      String?        @map("medium_custom") @db.VarChar(120)
+  dimensionsText    String?        @map("dimensions_text") @db.VarChar(80)
+  dimensionsUnknown Boolean        @default(false) @map("dimensions_unknown")
+  framed            Boolean        @default(false)
+  yearCreated       Int?           @map("year_created")
+  status            ArtworkStatus  @default(draft)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  artist            Artist?        @relation(fields: [artistId], references: [id], onDelete: SetNull)
+  images            ArtworkImage[]
+
+  @@index([title])
+  @@index([artistName], map: "artworks_artist_name_idx")
+  @@index([artistId], map: "artworks_artist_id_idx")
+  @@map("artworks")
+}
+
+model Artist {
+  id        String    @id @db.Char(36)
+  name      String    @db.VarChar(160)
+  birthYear Int?      @map("birth_year")
+  deathYear Int?      @map("death_year")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  artworks  Artwork[]
+
+  @@index([name], map: "artists_name_idx")
+  @@map("artists")
+}
+
+model ArtworkImage {
+  id         String   @id @db.Char(36)
+  artworkId  String   @map("artwork_id") @db.Char(36)
+  storageKey String   @map("storage_key") @db.VarChar(512)
+  url        String   @db.VarChar(1024)
+  sortOrder  Int      @map("sort_order") @default(0)
+  isPrimary  Boolean  @map("is_primary") @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  artwork    Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+
+  @@index([artworkId], map: "artwork_images_artwork_id_idx")
+  @@map("artwork_images")
+}
+
+enum ArtworkStatus {
+  draft
+  published
+}
