@@ -7,9 +7,9 @@ export default function Home() {
       </p>
       <div className="flex gap-3">
         <a href="/login" className="rounded bg-black px-4 py-2 text-white">
-          Admin Login
+          Sign In
         </a>
-        <a href="/admin" className="rounded border px-4 py-2">
+        <a href="/artworks" className="rounded border px-4 py-2">
           Go to Dashboard
         </a>
       </div>

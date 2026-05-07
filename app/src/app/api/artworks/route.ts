@@ -4,6 +4,7 @@ import { apiError, ok } from "@/lib/api";
 import { mapArtworkBase } from "@/lib/artwork-presenter";
 import { getSessionUser } from "@/lib/auth";
 import { MEDIUM_PRESET_OPTIONS } from "@/lib/medium-options";
+import { canUser } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { resolveImageUrl } from "@/lib/uploads";
 import {
@@ -35,6 +36,9 @@ export async function GET(req: Request) {
   const user = await getSessionUser();
   if (!user) {
     return apiError("UNAUTHORIZED", "Authentication required.", 401);
+  }
+  if (!canUser(user, "artwork:read")) {
+    return apiError("FORBIDDEN", "Not allowed to view artworks.", 403);
   }
 
   const { q, medium, status, page, pageSize } = parseListParams(new URL(req.url));
@@ -112,6 +116,9 @@ export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) {
     return apiError("UNAUTHORIZED", "Authentication required.", 401);
+  }
+  if (!canUser(user, "artwork:create")) {
+    return apiError("FORBIDDEN", "Not allowed to create artworks.", 403);
   }
 
   let payload: unknown;

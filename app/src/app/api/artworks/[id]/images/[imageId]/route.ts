@@ -1,5 +1,6 @@
 import { apiError, ok } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
+import { canUser } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { deleteStoredImage } from "@/lib/uploads";
 
@@ -10,6 +11,9 @@ export async function DELETE(
   const user = await getSessionUser();
   if (!user) {
     return apiError("UNAUTHORIZED", "Authentication required.", 401);
+  }
+  if (!canUser(user, "artwork:delete")) {
+    return apiError("FORBIDDEN", "Not allowed to delete artwork images.", 403);
   }
 
   const { id, imageId } = await ctx.params;

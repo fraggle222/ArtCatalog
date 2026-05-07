@@ -15,11 +15,14 @@ datasource db {
 }
 
 model AdminUser {
-  id           String   @id @db.Char(36)
-  email        String   @unique @db.VarChar(255)
-  passwordHash String   @db.VarChar(255)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                 String               @id @db.Char(36)
+  email              String               @unique @db.VarChar(255)
+  passwordHash       String               @db.VarChar(255)
+  role               UserRole             @default(admin)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  favoriteListsOwned FavoriteList[]
+  favoriteListMember FavoriteListMember[]
 }
 
 model Artwork {
@@ -41,11 +44,53 @@ model Artwork {
   updatedAt         DateTime       @updatedAt
   artist            Artist?        @relation(fields: [artistId], references: [id], onDelete: SetNull)
   images            ArtworkImage[]
+  favoriteListItems FavoriteListArtwork[]
 
   @@index([title])
   @@index([artistName], map: "artworks_artist_name_idx")
   @@index([artistId], map: "artworks_artist_id_idx")
   @@map("artworks")
+}
+
+model FavoriteList {
+  id        String               @id @db.Char(36)
+  name      String               @db.VarChar(160)
+  ownerId   String               @map("owner_id") @db.Char(36)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  owner     AdminUser            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members   FavoriteListMember[]
+  artworks  FavoriteListArtwork[]
+
+  @@index([ownerId], map: "favorite_lists_owner_id_idx")
+  @@map("favorite_lists")
+}
+
+model FavoriteListMember {
+  favoriteListId String             @map("favorite_list_id") @db.Char(36)
+  userId         String             @map("user_id") @db.Char(36)
+  access         FavoriteListAccess @default(viewer)
+  createdAt      DateTime           @default(now())
+  favoriteList   FavoriteList       @relation(fields: [favoriteListId], references: [id], onDelete: Cascade)
+  user           AdminUser          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([favoriteListId, userId])
+  @@index([userId], map: "favorite_list_members_user_id_idx")
+  @@map("favorite_list_members")
+}
+
+model FavoriteListArtwork {
+  favoriteListId String       @map("favorite_list_id") @db.Char(36)
+  artworkId      String       @map("artwork_id") @db.Char(36)
+  sortOrder      Int          @map("sort_order") @default(0)
+  createdAt      DateTime     @default(now())
+  favoriteList   FavoriteList @relation(fields: [favoriteListId], references: [id], onDelete: Cascade)
+  artwork        Artwork      @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+
+  @@id([favoriteListId, artworkId])
+  @@index([artworkId], map: "favorite_list_artworks_artwork_id_idx")
+  @@index([favoriteListId, sortOrder], map: "favorite_list_artworks_sort_order_idx")
+  @@map("favorite_list_artworks")
 }
 
 model Artist {
@@ -79,4 +124,14 @@ model ArtworkImage {
 enum ArtworkStatus {
   draft
   published
+}
+
+enum UserRole {
+  admin
+  editor
+  viewer
+}
+
+enum FavoriteListAccess {
+  viewer
 }

@@ -21,6 +21,41 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(255),
 });
 
+export const createUserSchema = z.object({
+  email: z.email().trim().max(255),
+  password: z.string().min(8).max(255),
+  role: z.enum(["admin", "editor", "viewer"]),
+});
+
+export const updateUserSchema = z
+  .object({
+    password: z.string().min(8).max(255).optional(),
+    role: z.enum(["admin", "editor", "viewer"]).optional(),
+  })
+  .refine((value) => value.password !== undefined || value.role !== undefined, {
+    message: "Provide role or password to update.",
+  });
+
+export const createFavoriteListSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+});
+
+export const updateFavoriteListSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+});
+
+export const addFavoriteListMemberSchema = z.object({
+  userId: z.string().trim().min(1),
+});
+
+export const addFavoriteListArtworkSchema = z.object({
+  artworkId: z.string().trim().min(1),
+});
+
+export const reorderFavoriteListArtworksSchema = z.object({
+  artworkIds: z.array(z.string().trim().min(1)).min(1),
+});
+
 const artworkBaseSchema = z.object({
   title: optionalTrimmedString(200),
   title_unknown: z.boolean().optional().default(false),

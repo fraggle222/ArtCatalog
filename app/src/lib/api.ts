@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 type ErrorCode =
   | "VALIDATION_ERROR"
   | "UNAUTHORIZED"
+  | "FORBIDDEN"
   | "NOT_FOUND"
   | "INTERNAL_ERROR";
 

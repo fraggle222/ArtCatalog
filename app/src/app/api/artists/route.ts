@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { apiError, ok } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
+import { canUser } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import {
   createArtistSchema,
@@ -11,6 +12,9 @@ export async function GET() {
   const user = await getSessionUser();
   if (!user) {
     return apiError("UNAUTHORIZED", "Authentication required.", 401);
+  }
+  if (!canUser(user, "artist:read")) {
+    return apiError("FORBIDDEN", "Not allowed to view artists.", 403);
   }
 
   const artists = await prisma.artist.findMany({
@@ -33,6 +37,9 @@ export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) {
     return apiError("UNAUTHORIZED", "Authentication required.", 401);
+  }
+  if (!canUser(user, "artist:create")) {
+    return apiError("FORBIDDEN", "Not allowed to create artists.", 403);
   }
 
   let payload: unknown;

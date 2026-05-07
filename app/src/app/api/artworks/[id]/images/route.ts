@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { apiError, ok } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
+import { canUser } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { resolveImageUrl, storeUploadedImage } from "@/lib/uploads";
 import { reorderImagesSchema, zodErrorDetails } from "@/lib/validation";
@@ -12,6 +13,9 @@ export async function POST(
   const user = await getSessionUser();
   if (!user) {
     return apiError("UNAUTHORIZED", "Authentication required.", 401);
+  }
+  if (!canUser(user, "artwork:update")) {
+    return apiError("FORBIDDEN", "Not allowed to update artworks.", 403);
   }
 
   const { id } = await ctx.params;
@@ -89,6 +93,9 @@ export async function PATCH(
   const user = await getSessionUser();
   if (!user) {
     return apiError("UNAUTHORIZED", "Authentication required.", 401);
+  }
+  if (!canUser(user, "artwork:update")) {
+    return apiError("FORBIDDEN", "Not allowed to update artworks.", 403);
   }
 
   const { id } = await ctx.params;

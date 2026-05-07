@@ -1,4 +1,5 @@
 export type ArtworkStatus = "draft" | "published";
+export type UserRole = "admin" | "editor" | "viewer";
 
 export interface Artist {
   id: string;
@@ -48,4 +49,50 @@ export interface ArtworkSummary extends Artwork {
 
 export interface ArtworkDetail extends Artwork {
   images: ArtworkImage[];
+}
+
+export interface AppUser {
+  id: string;
+  email: string;
+  role: UserRole;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FavoriteListSummary {
+  id: string;
+  name: string;
+  owner: { id: string; email: string };
+  can_edit_settings: boolean;
+  can_edit_content: boolean;
+  artwork_count: number;
+  member_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FavoriteListMember {
+  user_id: string;
+  email: string;
+  role: UserRole;
+  access: "viewer";
+  created_at: string;
+}
+
+export interface FavoriteListArtwork {
+  artwork_id: string;
+  sort_order: number;
+  artwork: Pick<Artwork, "id" | "display_title" | "artist"> & {
+    primary_image_url: string | null;
+  };
+}
+
+export interface FavoriteListDetail {
+  id: string;
+  name: string;
+  owner: { id: string; email: string };
+  can_edit_settings: boolean;
+  can_edit_content: boolean;
+  members: FavoriteListMember[];
+  artworks: FavoriteListArtwork[];
 }

@@ -8,6 +8,15 @@ import type { Artist, ArtworkDetail, ArtworkImage } from "@/types/contracts";
 type ArtworkFormProps = {
   artwork?: ArtworkDetail;
   artists: Artist[];
+  capabilities?: ArtworkCapabilities;
+};
+
+type ArtworkCapabilities = {
+  canEditArtwork: boolean;
+  canDeleteArtwork: boolean;
+  canManageImages: boolean;
+  canDeleteImages: boolean;
+  canManageArtistsLink: boolean;
 };
 
 type FormState = {
@@ -24,6 +33,8 @@ type FormState = {
   year_created: string;
   status: "draft" | "published";
 };
+
+type SaveMode = "save-only" | "save-and-close";
 
 function toFormState(artwork?: ArtworkDetail): FormState {
   const hasCustomMedium = Boolean(artwork?.medium_custom || artwork?.medium);
@@ -59,8 +70,21 @@ function toPayload(form: FormState) {
   };
 }
 
-export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
+export function ArtworkForm({ artwork, artists, capabilities }: ArtworkFormProps) {
   const router = useRouter();
+  const {
+    canEditArtwork,
+    canDeleteArtwork,
+    canManageImages,
+    canDeleteImages,
+    canManageArtistsLink,
+  } = capabilities ?? {
+    canEditArtwork: true,
+    canDeleteArtwork: true,
+    canManageImages: true,
+    canDeleteImages: true,
+    canManageArtistsLink: true,
+  };
   const [form, setForm] = useState<FormState>(toFormState(artwork));
   const [images, setImages] = useState<ArtworkImage[]>(artwork?.images ?? []);
   const [saving, setSaving] = useState(false);
@@ -87,7 +111,12 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
     (form.medium_mode === "preset" && form.medium_preset.length > 0) ||
     (form.medium_mode === "custom" && form.medium_custom.trim().length > 0);
   const canSubmit =
-    !saving && isDirty && hasTitle && hasMedium && form.artist_id.length > 0;
+    canEditArtwork &&
+    !saving &&
+    isDirty &&
+    hasTitle &&
+    hasMedium &&
+    form.artist_id.length > 0;
 
   useEffect(() => {
     if (!previewImageUrl && !deleteModalOpen) {
@@ -120,6 +149,16 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!canEditArtwork) {
+      return;
+    }
+
+    const submitter = (event.nativeEvent as SubmitEvent).submitter as
+      | HTMLButtonElement
+      | null;
+    const saveMode: SaveMode =
+      submitter?.dataset.saveMode === "close" ? "save-and-close" : "save-only";
+
     setSaving(true);
     setError(null);
 
@@ -149,11 +188,25 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
     }
 
     setSavedSnapshot(JSON.stringify(payload));
+    if (saveMode === "save-and-close") {
+      if (typeof window !== "undefined" && window.history.length > 1) {
+        const currentPath = window.location.pathname;
+        router.back();
+        window.setTimeout(() => {
+          if (window.location.pathname === currentPath) {
+            router.push("/artworks");
+          }
+        }, 250);
+        return;
+      }
+      router.push("/artworks");
+      return;
+    }
     router.refresh();
   }
 
   async function onUpload(files: FileList | null) {
-    if (!artworkId || !files || files.length === 0) {
+    if (!canManageImages || !artworkId || !files || files.length === 0) {
       return;
     }
 
@@ -180,7 +233,7 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
   }
 
   async function applyReorder(nextOrder: ArtworkImage[]) {
-    if (!artworkId || nextOrder.length === 0) {
+    if (!canManageImages || !artworkId || nextOrder.length === 0) {
       return;
     }
     const primary = nextOrder.find((item) => item.is_primary) ?? nextOrder[0];
@@ -213,7 +266,7 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
   }
 
   async function makePrimary(imageId: string) {
-    if (!artworkId) {
+    if (!canManageImages || !artworkId) {
       return;
     }
     const response = await fetch(`/api/artworks/${artworkId}/images`, {
@@ -233,7 +286,7 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
   }
 
   async function deleteImage(imageId: string) {
-    if (!artworkId) {
+    if (!canDeleteImages || !artworkId) {
       return;
     }
     const response = await fetch(`/api/artworks/${artworkId}/images/${imageId}`, {
@@ -247,7 +300,7 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
   }
 
   async function confirmDeleteArtwork() {
-    if (!artworkId) {
+    if (!canDeleteArtwork || !artworkId) {
       return;
     }
 
@@ -265,7 +318,7 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
     }
 
     setDeleteModalOpen(false);
-    router.push("/admin");
+    router.push("/artworks");
     router.refresh();
   }
 
@@ -279,13 +332,14 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
               className="w-full rounded border px-3 py-2"
               value={form.title}
               onChange={(event) => updateField("title", event.target.value)}
-              disabled={form.title_unknown}
+              disabled={!canEditArtwork || form.title_unknown}
               required={!form.title_unknown}
             />
             <label className="mt-2 flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={form.title_unknown}
+                disabled={!canEditArtwork}
                 onChange={(event) =>
                   updateField("title_unknown", event.target.checked)
                 }
@@ -299,6 +353,7 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
               className="w-full rounded border px-3 py-2"
               value={form.artist_id}
               onChange={(event) => updateField("artist_id", event.target.value)}
+              disabled={!canEditArtwork}
               required
             >
               <option value="">Select artist</option>
@@ -308,12 +363,14 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
                 </option>
               ))}
             </select>
-            <a
-              className="mt-2 inline-block text-sm text-zinc-600 underline"
-              href="/admin/artists"
-            >
-              Manage artists
-            </a>
+            {canManageArtistsLink ? (
+              <a
+                className="mt-2 inline-block text-sm text-zinc-600 underline"
+                href="/admin/artists"
+              >
+                Manage artists
+              </a>
+            ) : null}
           </label>
           <label className="block">
             <span className="mb-1 block text-sm font-medium">Medium & Support</span>
@@ -338,6 +395,7 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
                   medium_preset: value,
                 }));
               }}
+              disabled={!canEditArtwork}
             >
               <option value="">Select medium</option>
               {MEDIUM_PRESET_OPTIONS.map((medium) => (
@@ -352,6 +410,7 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
                 className="mt-2 w-full rounded border px-3 py-2"
                 placeholder="Enter custom medium/support"
                 value={form.medium_custom}
+                disabled={!canEditArtwork}
                 onChange={(event) =>
                   updateField("medium_custom", event.target.value)
                 }
@@ -366,12 +425,13 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
               onChange={(event) =>
                 updateField("dimensions_text", event.target.value)
               }
-              disabled={form.dimensions_unknown}
+              disabled={!canEditArtwork || form.dimensions_unknown}
             />
             <label className="mt-2 flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={form.dimensions_unknown}
+                disabled={!canEditArtwork}
                 onChange={(event) =>
                   updateField("dimensions_unknown", event.target.checked)
                 }
@@ -384,6 +444,7 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
             <input
               className="w-full rounded border px-3 py-2"
               value={form.year_created}
+              disabled={!canEditArtwork}
               onChange={(event) => updateField("year_created", event.target.value)}
               inputMode="numeric"
             />
@@ -393,6 +454,7 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
             <select
               className="w-full rounded border px-3 py-2"
               value={form.status}
+              disabled={!canEditArtwork}
               onChange={(event) =>
                 updateField("status", event.target.value as "draft" | "published")
               }
@@ -409,6 +471,7 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
                 className={`px-3 py-2 text-sm ${
                   form.framed ? "bg-black text-white" : "bg-white"
                 }`}
+                disabled={!canEditArtwork}
                 onClick={() => updateField("framed", true)}
               >
                 Framed
@@ -418,6 +481,7 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
                 className={`border-l px-3 py-2 text-sm ${
                   !form.framed ? "bg-black text-white" : "bg-white"
                 }`}
+                disabled={!canEditArtwork}
                 onClick={() => updateField("framed", false)}
               >
                 Unframed
@@ -430,19 +494,41 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
           <textarea
             className="min-h-32 w-full rounded border px-3 py-2"
             value={form.description}
+            disabled={!canEditArtwork}
             onChange={(event) => updateField("description", event.target.value)}
           />
         </label>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            className="rounded bg-black px-4 py-2 text-white disabled:opacity-60"
-          >
-            {saving ? "Saving..." : isEdit ? "Save Changes" : "Create Artwork"}
-          </button>
           {isEdit ? (
+            <>
+              <button
+                type="submit"
+                data-save-mode="close"
+                disabled={!canSubmit}
+                className="rounded bg-black px-4 py-2 text-white disabled:opacity-60"
+              >
+                {saving ? "Saving..." : "Save & Close"}
+              </button>
+              <button
+                type="submit"
+                data-save-mode="stay"
+                disabled={!canSubmit}
+                className="rounded border px-4 py-2 disabled:opacity-60"
+              >
+                {saving ? "Saving..." : "Save"}
+              </button>
+            </>
+          ) : (
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="rounded bg-black px-4 py-2 text-white disabled:opacity-60"
+            >
+              {saving ? "Saving..." : "Create Artwork"}
+            </button>
+          )}
+          {isEdit && canDeleteArtwork ? (
             <button
               type="button"
               className="rounded border border-red-300 px-4 py-2 text-red-700"
@@ -469,9 +555,14 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
               multiple
               capture="environment"
               onChange={(event) => onUpload(event.target.files)}
-              disabled={uploading}
+              disabled={uploading || !canManageImages}
             />
             {uploading ? <p className="text-sm">Uploading...</p> : null}
+            {!canManageImages ? (
+              <p className="text-sm text-zinc-600">
+                You have read-only image access.
+              </p>
+            ) : null}
             {sortedImages.length === 0 ? (
               <p className="text-sm text-zinc-600">No images uploaded yet.</p>
             ) : (
@@ -503,7 +594,7 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
                         type="button"
                         className="rounded border px-2 py-1 text-sm"
                         onClick={() => moveImage(image.id, -1)}
-                        disabled={index === 0}
+                        disabled={!canManageImages || index === 0}
                       >
                         Up
                       </button>
@@ -511,7 +602,9 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
                         type="button"
                         className="rounded border px-2 py-1 text-sm"
                         onClick={() => moveImage(image.id, 1)}
-                        disabled={index === sortedImages.length - 1}
+                        disabled={
+                          !canManageImages || index === sortedImages.length - 1
+                        }
                       >
                         Down
                       </button>
@@ -519,17 +612,19 @@ export function ArtworkForm({ artwork, artists }: ArtworkFormProps) {
                         type="button"
                         className="rounded border px-2 py-1 text-sm"
                         onClick={() => makePrimary(image.id)}
-                        disabled={image.is_primary}
+                        disabled={!canManageImages || image.is_primary}
                       >
                         Set Primary
                       </button>
-                      <button
-                        type="button"
-                        className="rounded border px-2 py-1 text-sm text-red-600"
-                        onClick={() => deleteImage(image.id)}
-                      >
-                        Delete
-                      </button>
+                      {canDeleteImages ? (
+                        <button
+                          type="button"
+                          className="rounded border px-2 py-1 text-sm text-red-600"
+                          onClick={() => deleteImage(image.id)}
+                        >
+                          Delete
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 ))}

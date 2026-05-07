@@ -28,7 +28,7 @@ export default function LoginPage() {
         setError(data.error?.message ?? "Login failed.");
         return;
       }
-      router.push("/admin");
+      router.push("/artworks");
       router.refresh();
     } finally {
       setLoading(false);
@@ -37,7 +37,7 @@ export default function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6">
-      <h1 className="mb-6 text-3xl font-semibold">Admin Login</h1>
+      <h1 className="mb-6 text-3xl font-semibold">Sign In</h1>
       <form onSubmit={onSubmit} className="space-y-4 rounded-lg border p-4">
         <div>
           <label htmlFor="email" className="mb-1 block text-sm font-medium">

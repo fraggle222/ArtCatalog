@@ -20,9 +20,11 @@ async function main() {
       id: randomUUID(),
       email,
       passwordHash,
+      role: "admin",
     },
     update: {
       passwordHash,
+      role: "admin",
     },
   });
 

@@ -2,12 +2,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArtistsManager } from "@/components/admin/artists-manager";
 import { getSessionUser } from "@/lib/auth";
+import { canUser } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 export default async function ArtistsPage() {
   const user = await getSessionUser();
   if (!user) {
     redirect("/login");
+  }
+  if (!canUser(user, "artist:create")) {
+    redirect("/artworks");
   }
 
   const artists = await prisma.artist.findMany({
@@ -17,12 +21,13 @@ export default async function ArtistsPage() {
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-6 md:px-6">
       <div className="mb-4">
-        <Link href="/admin" className="text-sm text-zinc-600 underline">
+        <Link href="/artworks" className="text-sm text-zinc-600 underline">
           Back to artworks
         </Link>
       </div>
       <h1 className="mb-4 text-2xl font-semibold">Artists</h1>
       <ArtistsManager
+        canDeleteArtists={canUser(user, "artist:delete")}
         initialArtists={artists.map((artist) => ({
           id: artist.id,
           name: artist.name,

@@ -5,6 +5,7 @@ import type { Artist } from "@/types/contracts";
 
 type ArtistsManagerProps = {
   initialArtists: Artist[];
+  canDeleteArtists: boolean;
 };
 
 type ArtistForm = {
@@ -19,7 +20,10 @@ const emptyForm: ArtistForm = {
   death_year: "",
 };
 
-export function ArtistsManager({ initialArtists }: ArtistsManagerProps) {
+export function ArtistsManager({
+  initialArtists,
+  canDeleteArtists,
+}: ArtistsManagerProps) {
   const [artists, setArtists] = useState(initialArtists);
   const [createForm, setCreateForm] = useState<ArtistForm>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -221,13 +225,15 @@ export function ArtistsManager({ initialArtists }: ArtistsManagerProps) {
                     >
                       Edit
                     </button>
-                    <button
-                      type="button"
-                      className="rounded border px-3 py-2 text-sm text-red-600"
-                      onClick={() => deleteArtist(artist.id)}
-                    >
-                      Delete
-                    </button>
+                    {canDeleteArtists ? (
+                      <button
+                        type="button"
+                        className="rounded border px-3 py-2 text-sm text-red-600"
+                        onClick={() => deleteArtist(artist.id)}
+                      >
+                        Delete
+                      </button>
+                    ) : null}
                   </div>
                 </>
               )}

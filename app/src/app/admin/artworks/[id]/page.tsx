@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { AddToFavoriteModal } from "@/components/admin/add-to-favorite-modal";
 import { ArtworkForm } from "@/components/admin/artwork-form";
 import { displayMedium } from "@/lib/artwork-presenter";
 import { getSessionUser } from "@/lib/auth";
+import { canUser } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { resolveImageUrl } from "@/lib/uploads";
 
@@ -15,6 +17,9 @@ export default async function ArtworkDetailPage({
   if (!user) {
     redirect("/login");
   }
+  const canEditArtwork = canUser(user, "artwork:update");
+  const canDeleteArtwork = canUser(user, "artwork:delete");
+  const canManageArtistsLink = canUser(user, "artist:create");
 
   const { id } = await params;
   const [artwork, artists] = await Promise.all([
@@ -76,13 +81,25 @@ export default async function ArtworkDetailPage({
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-6 md:px-6">
       <div className="mb-4">
-        <Link href="/admin" className="text-sm text-zinc-600 underline">
+        <Link href="/artworks" className="text-sm text-zinc-600 underline">
           Back to artworks
         </Link>
       </div>
-      <h1 className="mb-4 text-2xl font-semibold">Edit Artwork</h1>
+      <h1 className="mb-4 text-2xl font-semibold">
+        {canEditArtwork ? "Edit Artwork" : "View Artwork"}
+      </h1>
+      <div className="mb-4">
+        <AddToFavoriteModal artworkId={artwork.id} />
+      </div>
       <ArtworkForm
         artwork={payload}
+        capabilities={{
+          canEditArtwork,
+          canDeleteArtwork,
+          canManageImages: canEditArtwork,
+          canDeleteImages: canDeleteArtwork,
+          canManageArtistsLink,
+        }}
         artists={artists.map((artist) => ({
           id: artist.id,
           name: artist.name,

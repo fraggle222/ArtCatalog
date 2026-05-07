@@ -1,5 +1,6 @@
 import { apiError, ok } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
+import { canUser } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import {
   updateArtistSchema,
@@ -13,6 +14,9 @@ export async function PATCH(
   const user = await getSessionUser();
   if (!user) {
     return apiError("UNAUTHORIZED", "Authentication required.", 401);
+  }
+  if (!canUser(user, "artist:update")) {
+    return apiError("FORBIDDEN", "Not allowed to update artists.", 403);
   }
 
   const { id } = await ctx.params;
@@ -67,6 +71,9 @@ export async function DELETE(
   const user = await getSessionUser();
   if (!user) {
     return apiError("UNAUTHORIZED", "Authentication required.", 401);
+  }
+  if (!canUser(user, "artist:delete")) {
+    return apiError("FORBIDDEN", "Not allowed to delete artists.", 403);
   }
 
   const { id } = await ctx.params;

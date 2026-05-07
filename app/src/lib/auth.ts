@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
+import { UserRole } from "@/generated/prisma/client";
 import { requireEnv } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 
@@ -10,6 +11,12 @@ const SESSION_TTL_SECONDS = 60 * 60 * 24 * 14;
 type SessionPayload = {
   userId: string;
   exp: number;
+};
+
+export type SessionUser = {
+  id: string;
+  email: string;
+  role: UserRole;
 };
 
 function toBase64Url(input: string) {
@@ -72,7 +79,7 @@ export async function clearSession() {
   cookieStore.delete(SESSION_COOKIE);
 }
 
-export async function getSessionUser() {
+export async function getSessionUser(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) {
@@ -86,7 +93,7 @@ export async function getSessionUser() {
 
   return prisma.adminUser.findUnique({
     where: { id: decoded.userId },
-    select: { id: true, email: true },
+    select: { id: true, email: true, role: true },
   });
 }
 
@@ -104,5 +111,5 @@ export async function verifyCredentials(email: string, password: string) {
     return null;
   }
 
-  return { id: user.id, email: user.email };
+  return { id: user.id, email: user.email, role: user.role };
 }
