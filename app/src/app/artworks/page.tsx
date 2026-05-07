@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Prisma } from "@/generated/prisma/client";
-import { displayMedium, displayTitle } from "@/lib/artwork-presenter";
+import { displayLocation, displayMedium, displayTitle } from "@/lib/artwork-presenter";
 import { getSessionUser } from "@/lib/auth";
+import { LOCATION_PRESET_OPTIONS } from "@/lib/location-options";
 import { MEDIUM_PRESET_OPTIONS } from "@/lib/medium-options";
 import { canUser } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -34,6 +35,8 @@ export default async function ArtworksPage({
   const canManageUsers = canUser(user, "user:manage");
   const selectedArtistId = getSearchValue(query.artistId).trim();
   const selectedMediumPreset = getSearchValue(query.mediumPreset).trim();
+  const selectedLocationPreset = getSearchValue(query.locationPreset).trim();
+  const locationCustomQuery = getSearchValue(query.locationCustom).trim();
   const showFramed = getSearchValue(query.showFramed) === "1";
   const showUnframed = getSearchValue(query.showUnframed) === "1";
   const where: Prisma.ArtworkWhereInput = {};
@@ -44,6 +47,19 @@ export default async function ArtworksPage({
   if (selectedMediumPreset) {
     where.mediumPreset = selectedMediumPreset;
   }
+  if (selectedLocationPreset) {
+    where.locationPreset = selectedLocationPreset;
+  }
+  if (locationCustomQuery) {
+    const locationRows = await prisma.$queryRaw<Array<{ id: string }>>(
+      Prisma.sql`
+        SELECT id
+        FROM artworks
+        WHERE LOWER(location_custom) LIKE ${`%${locationCustomQuery.toLowerCase()}%`}
+      `
+    );
+    where.id = { in: locationRows.map((row) => row.id) };
+  }
   if (showFramed !== showUnframed) {
     where.framed = showFramed;
   }
@@ -51,6 +67,8 @@ export default async function ArtworksPage({
   const hasActiveFilters =
     selectedArtistId.length > 0 ||
     selectedMediumPreset.length > 0 ||
+    selectedLocationPreset.length > 0 ||
+    locationCustomQuery.length > 0 ||
     showFramed !== showUnframed;
 
   const [artists, artworks] = await Promise.all([
@@ -120,7 +138,7 @@ export default async function ArtworksPage({
       </header>
 
       <form method="GET" className="mb-4 rounded-lg border p-3">
-        <div className="grid gap-3 md:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-5">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-zinc-700">
               Artist
@@ -155,6 +173,30 @@ export default async function ArtworksPage({
                 </option>
               ))}
             </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-zinc-700">
+              Location
+            </span>
+            <select
+              name="locationPreset"
+              className="w-full rounded border px-3 py-2 text-sm"
+              defaultValue={selectedLocationPreset}
+            >
+              <option value="">All locations</option>
+              {LOCATION_PRESET_OPTIONS.map((location) => (
+                <option key={location} value={location}>
+                  {location}
+                </option>
+              ))}
+            </select>
+            <input
+              name="locationCustom"
+              className="mt-2 w-full rounded border px-3 py-2 text-sm"
+              defaultValue={locationCustomQuery}
+              placeholder="Custom location contains..."
+            />
           </label>
 
           <div className="block">
@@ -234,6 +276,7 @@ export default async function ArtworksPage({
                     </p>
                     <p className="truncate text-xs text-zinc-500">
                       {displayMedium(artwork) ?? "Unknown medium"} •{" "}
+                      {displayLocation(artwork) ?? "Unknown location"} •{" "}
                       {artwork.dimensionsUnknown
                         ? "Unknown dimensions"
                         : artwork.dimensionsText ?? "Unknown dimensions"}

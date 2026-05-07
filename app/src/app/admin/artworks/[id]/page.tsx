@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AddToFavoriteModal } from "@/components/admin/add-to-favorite-modal";
 import { ArtworkForm } from "@/components/admin/artwork-form";
-import { displayMedium } from "@/lib/artwork-presenter";
+import { displayLocation, displayMedium } from "@/lib/artwork-presenter";
 import { getSessionUser } from "@/lib/auth";
 import { canUser } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -67,6 +67,9 @@ export default async function ArtworkDetailPage({
     medium_custom: artwork.mediumCustom,
     medium: artwork.medium,
     display_medium: displayMedium(artwork),
+    location_preset: artwork.locationPreset,
+    location_custom: artwork.locationCustom,
+    display_location: displayLocation(artwork),
     dimensions_text: artwork.dimensionsText,
     dimensions_unknown: artwork.dimensionsUnknown,
     framed: artwork.framed,

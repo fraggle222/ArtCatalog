@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { LOCATION_PRESET_OPTIONS } from "@/lib/location-options";
 import { MEDIUM_PRESET_OPTIONS } from "@/lib/medium-options";
 import type { Artist, ArtworkDetail, ArtworkImage } from "@/types/contracts";
 
@@ -27,6 +28,9 @@ type FormState = {
   medium_mode: "preset" | "custom";
   medium_preset: string;
   medium_custom: string;
+  location_mode: "preset" | "custom";
+  location_preset: string;
+  location_custom: string;
   dimensions_text: string;
   dimensions_unknown: boolean;
   framed: boolean;
@@ -38,6 +42,7 @@ type SaveMode = "save-only" | "save-and-close";
 
 function toFormState(artwork?: ArtworkDetail): FormState {
   const hasCustomMedium = Boolean(artwork?.medium_custom || artwork?.medium);
+  const hasCustomLocation = Boolean(artwork?.location_custom);
   return {
     title: artwork?.title ?? "",
     title_unknown: artwork?.title_unknown ?? false,
@@ -46,6 +51,9 @@ function toFormState(artwork?: ArtworkDetail): FormState {
     medium_mode: hasCustomMedium ? "custom" : "preset",
     medium_preset: artwork?.medium_preset ?? "",
     medium_custom: artwork?.medium_custom ?? artwork?.medium ?? "",
+    location_mode: hasCustomLocation ? "custom" : "preset",
+    location_preset: artwork?.location_preset ?? "",
+    location_custom: artwork?.location_custom ?? "",
     dimensions_text: artwork?.dimensions_text ?? "",
     dimensions_unknown: artwork?.dimensions_unknown ?? false,
     framed: artwork?.framed ?? false,
@@ -62,6 +70,10 @@ function toPayload(form: FormState) {
     description: form.description || null,
     medium_preset: form.medium_mode === "preset" ? form.medium_preset || null : null,
     medium_custom: form.medium_mode === "custom" ? form.medium_custom || null : null,
+    location_preset:
+      form.location_mode === "preset" ? form.location_preset || null : null,
+    location_custom:
+      form.location_mode === "custom" ? form.location_custom || null : null,
     dimensions_text: form.dimensions_text || null,
     dimensions_unknown: form.dimensions_unknown,
     framed: form.framed,
@@ -110,12 +122,16 @@ export function ArtworkForm({ artwork, artists, capabilities }: ArtworkFormProps
   const hasMedium =
     (form.medium_mode === "preset" && form.medium_preset.length > 0) ||
     (form.medium_mode === "custom" && form.medium_custom.trim().length > 0);
+  const hasLocation =
+    (form.location_mode === "preset" && form.location_preset.length > 0) ||
+    (form.location_mode === "custom" && form.location_custom.trim().length > 0);
   const canSubmit =
     canEditArtwork &&
     !saving &&
     isDirty &&
     hasTitle &&
     hasMedium &&
+    hasLocation &&
     form.artist_id.length > 0;
 
   useEffect(() => {
@@ -438,6 +454,53 @@ export function ArtworkForm({ artwork, artists, capabilities }: ArtworkFormProps
               />
               Dimensions unknown
             </label>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium">Location</span>
+            <select
+              className="w-full rounded border px-3 py-2"
+              value={
+                form.location_mode === "custom"
+                  ? "__custom__"
+                  : form.location_preset
+              }
+              onChange={(event) => {
+                const value = event.target.value;
+                if (value === "__custom__") {
+                  setForm((current) => ({
+                    ...current,
+                    location_mode: "custom",
+                    location_preset: "",
+                  }));
+                  return;
+                }
+                setForm((current) => ({
+                  ...current,
+                  location_mode: "preset",
+                  location_preset: value,
+                }));
+              }}
+              disabled={!canEditArtwork}
+            >
+              <option value="">Select location</option>
+              {LOCATION_PRESET_OPTIONS.map((location) => (
+                <option key={location} value={location}>
+                  {location}
+                </option>
+              ))}
+              <option value="__custom__">Custom...</option>
+            </select>
+            {form.location_mode === "custom" ? (
+              <input
+                className="mt-2 w-full rounded border px-3 py-2"
+                placeholder="Enter custom location"
+                value={form.location_custom}
+                disabled={!canEditArtwork}
+                onChange={(event) =>
+                  updateField("location_custom", event.target.value)
+                }
+              />
+            ) : null}
           </label>
           <label className="block">
             <span className="mb-1 block text-sm font-medium">Year Created</span>

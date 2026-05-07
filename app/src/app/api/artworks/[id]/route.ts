@@ -1,6 +1,7 @@
 import { apiError, ok } from "@/lib/api";
 import { mapArtworkBase } from "@/lib/artwork-presenter";
 import { getSessionUser } from "@/lib/auth";
+import { LOCATION_PRESET_OPTIONS } from "@/lib/location-options";
 import { MEDIUM_PRESET_OPTIONS } from "@/lib/medium-options";
 import { canUser } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -90,6 +91,14 @@ export async function PATCH(
   ) {
     return apiError("VALIDATION_ERROR", "Unsupported medium preset.", 400);
   }
+  if (
+    parsed.data.location_preset &&
+    !(LOCATION_PRESET_OPTIONS as readonly string[]).includes(
+      parsed.data.location_preset
+    )
+  ) {
+    return apiError("VALIDATION_ERROR", "Unsupported location preset.", 400);
+  }
 
   if (parsed.data.artist_id) {
     const artist = await prisma.artist.findUnique({
@@ -125,6 +134,12 @@ export async function PATCH(
           : {}),
         ...(parsed.data.medium_custom !== undefined
           ? { mediumCustom: parsed.data.medium_custom }
+          : {}),
+        ...(parsed.data.location_preset !== undefined
+          ? { locationPreset: parsed.data.location_preset }
+          : {}),
+        ...(parsed.data.location_custom !== undefined
+          ? { locationCustom: parsed.data.location_custom }
           : {}),
         ...(parsed.data.dimensions_text !== undefined
           ? { dimensionsText: parsed.data.dimensions_text }

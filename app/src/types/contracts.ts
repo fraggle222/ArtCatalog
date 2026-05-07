@@ -32,6 +32,9 @@ export interface Artwork {
   medium_custom: string | null;
   medium: string | null;
   display_medium: string | null;
+  location_preset: string | null;
+  location_custom: string | null;
+  display_location: string | null;
   dimensions_text: string | null;
   dimensions_unknown: boolean;
   framed: boolean;

@@ -35,6 +35,8 @@ model Artwork {
   medium            String?        @db.VarChar(120)
   mediumPreset      String?        @map("medium_preset") @db.VarChar(120)
   mediumCustom      String?        @map("medium_custom") @db.VarChar(120)
+  locationPreset    String?        @map("location_preset") @db.VarChar(120)
+  locationCustom    String?        @map("location_custom") @db.VarChar(120)
   dimensionsText    String?        @map("dimensions_text") @db.VarChar(80)
   dimensionsUnknown Boolean        @default(false) @map("dimensions_unknown")
   framed            Boolean        @default(false)

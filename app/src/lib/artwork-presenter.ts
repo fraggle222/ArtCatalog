@@ -13,6 +13,10 @@ export function displayMedium(artwork: ArtworkWithArtist) {
   return artwork.mediumCustom ?? artwork.mediumPreset ?? artwork.medium ?? null;
 }
 
+export function displayLocation(artwork: ArtworkWithArtist) {
+  return artwork.locationCustom ?? artwork.locationPreset ?? null;
+}
+
 export function mapArtworkBase(artwork: ArtworkWithArtist) {
   return {
     id: artwork.id,
@@ -27,6 +31,9 @@ export function mapArtworkBase(artwork: ArtworkWithArtist) {
     medium_custom: artwork.mediumCustom,
     medium: artwork.medium,
     display_medium: displayMedium(artwork),
+    location_preset: artwork.locationPreset,
+    location_custom: artwork.locationCustom,
+    display_location: displayLocation(artwork),
     dimensions_text: artwork.dimensionsText,
     dimensions_unknown: artwork.dimensionsUnknown,
     framed: artwork.framed,

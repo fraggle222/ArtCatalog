@@ -3,6 +3,7 @@ import { ArtworkStatus, Prisma } from "@/generated/prisma/client";
 import { apiError, ok } from "@/lib/api";
 import { mapArtworkBase } from "@/lib/artwork-presenter";
 import { getSessionUser } from "@/lib/auth";
+import { LOCATION_PRESET_OPTIONS } from "@/lib/location-options";
 import { MEDIUM_PRESET_OPTIONS } from "@/lib/medium-options";
 import { canUser } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -15,6 +16,7 @@ import {
 function parseListParams(url: URL) {
   const q = (url.searchParams.get("q") ?? "").trim();
   const medium = (url.searchParams.get("medium") ?? "").trim();
+  const location = (url.searchParams.get("location") ?? "").trim();
   const statusRaw = url.searchParams.get("status");
   const status =
     statusRaw === "draft"
@@ -29,7 +31,7 @@ function parseListParams(url: URL) {
     Math.max(1, Number(url.searchParams.get("pageSize")) || 20)
   );
 
-  return { q, medium, status, page, pageSize };
+  return { q, medium, location, status, page, pageSize };
 }
 
 export async function GET(req: Request) {
@@ -41,7 +43,7 @@ export async function GET(req: Request) {
     return apiError("FORBIDDEN", "Not allowed to view artworks.", 403);
   }
 
-  const { q, medium, status, page, pageSize } = parseListParams(new URL(req.url));
+  const { q, medium, location, status, page, pageSize } = parseListParams(new URL(req.url));
   const where: Prisma.ArtworkWhereInput = {};
   const andFilters: Prisma.ArtworkWhereInput[] = [];
 
@@ -62,6 +64,20 @@ export async function GET(req: Request) {
         { mediumCustom: { contains: medium } },
         { medium: { contains: medium } },
       ],
+    });
+  }
+
+  if (location) {
+    const locationRows = await prisma.$queryRaw<Array<{ id: string }>>(
+      Prisma.sql`
+        SELECT id
+        FROM artworks
+        WHERE LOWER(location_preset) LIKE ${`%${location.toLowerCase()}%`}
+           OR LOWER(location_custom) LIKE ${`%${location.toLowerCase()}%`}
+      `
+    );
+    andFilters.push({
+      id: { in: locationRows.map((row) => row.id) },
     });
   }
 
@@ -146,6 +162,14 @@ export async function POST(req: Request) {
   ) {
     return apiError("VALIDATION_ERROR", "Unsupported medium preset.", 400);
   }
+  if (
+    parsed.data.location_preset &&
+    !(LOCATION_PRESET_OPTIONS as readonly string[]).includes(
+      parsed.data.location_preset
+    )
+  ) {
+    return apiError("VALIDATION_ERROR", "Unsupported location preset.", 400);
+  }
 
   const artist = await prisma.artist.findUnique({
     where: { id: parsed.data.artist_id },
@@ -166,6 +190,8 @@ export async function POST(req: Request) {
       medium: null,
       mediumPreset: parsed.data.medium_preset,
       mediumCustom: parsed.data.medium_custom,
+      locationPreset: parsed.data.location_preset,
+      locationCustom: parsed.data.location_custom,
       dimensionsText: parsed.data.dimensions_text,
       dimensionsUnknown: parsed.data.dimensions_unknown,
       framed: parsed.data.framed,

@@ -63,6 +63,8 @@ const artworkBaseSchema = z.object({
   description: optionalTrimmedString(5000),
   medium_preset: optionalTrimmedString(120),
   medium_custom: optionalTrimmedString(120),
+  location_preset: optionalTrimmedString(120),
+  location_custom: optionalTrimmedString(120),
   dimensions_text: optionalTrimmedString(80),
   dimensions_unknown: z.boolean().optional().default(false),
   framed: z.boolean().optional().default(false),
@@ -103,6 +105,22 @@ function artworkRefinement(
         message: "Use either preset or custom medium, not both.",
       });
     }
+
+    if (!value.location_preset && !value.location_custom) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["location_preset"],
+        message: "Select a preset or provide a custom location.",
+      });
+    }
+
+    if (value.location_preset && value.location_custom) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["location_custom"],
+        message: "Use either preset or custom location, not both.",
+      });
+    }
 }
 
 function partialArtworkRefinement(
@@ -111,6 +129,8 @@ function partialArtworkRefinement(
     title_unknown?: boolean;
     medium_preset?: string | null;
     medium_custom?: string | null;
+    location_preset?: string | null;
+    location_custom?: string | null;
   },
   ctx: z.RefinementCtx
 ) {
@@ -127,6 +147,14 @@ function partialArtworkRefinement(
       code: z.ZodIssueCode.custom,
       path: ["medium_custom"],
       message: "Use either preset or custom medium, not both.",
+    });
+  }
+
+  if (value.location_preset && value.location_custom) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["location_custom"],
+      message: "Use either preset or custom location, not both.",
     });
   }
 }
