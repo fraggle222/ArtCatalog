@@ -19,6 +19,20 @@ type NavItem = {
   activePrefixes: string[];
 };
 
+const desktopPillBase =
+  "whitespace-nowrap rounded border px-1.5 py-1.5 text-sm md:px-3 md:py-2";
+const desktopPillActive =
+  `${desktopPillBase} border-zinc-900 bg-zinc-900 text-white shadow-sm`;
+const desktopPillInactive =
+  `${desktopPillBase} border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50`;
+const mobileMenuItemBase = "block w-full rounded border px-3 py-2 text-sm";
+const mobileMenuItemActive =
+  `${mobileMenuItemBase} border-zinc-900 bg-zinc-900 text-white`;
+const mobileMenuItemInactive =
+  `${mobileMenuItemBase} border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50`;
+const logoutButtonClass =
+  "rounded border border-zinc-300 px-2 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50";
+
 function isNavItemActive(pathname: string, activePrefixes: string[]) {
   return activePrefixes.some((prefix) => {
     if (prefix === "/") {
@@ -29,9 +43,7 @@ function isNavItemActive(pathname: string, activePrefixes: string[]) {
 }
 
 function navClassName(active: boolean) {
-  return active
-    ? "whitespace-nowrap rounded border border-zinc-900 bg-zinc-900 px-1.5 py-1.5 text-sm text-white shadow-sm md:px-3 md:py-2"
-    : "whitespace-nowrap rounded border border-zinc-300 bg-white px-1.5 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 md:px-3 md:py-2";
+  return active ? desktopPillActive : desktopPillInactive;
 }
 
 export function AppNavbar({ user }: AppNavbarProps) {
@@ -111,7 +123,7 @@ export function AppNavbar({ user }: AppNavbarProps) {
             <p className="hidden text-sm text-zinc-600 md:block">
               {user.email} ({user.role})
             </p>
-            <LogoutButton className="whitespace-nowrap rounded border border-zinc-300 px-1.5 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 md:px-3 md:py-2" />
+            <LogoutButton className={`whitespace-nowrap ${logoutButtonClass}`} />
           </div>
         </div>
 
@@ -144,11 +156,7 @@ export function AppNavbar({ user }: AppNavbarProps) {
                     key={item.href}
                     href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={
-                      active
-                        ? "block w-full rounded border border-zinc-900 bg-zinc-900 px-3 py-2 text-sm text-white"
-                        : "block w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
-                    }
+                    className={active ? mobileMenuItemActive : mobileMenuItemInactive}
                   >
                     {item.label}
                   </Link>
@@ -159,7 +167,7 @@ export function AppNavbar({ user }: AppNavbarProps) {
               <p className="min-w-0 text-sm text-zinc-600">
                 {user.email} ({user.role})
               </p>
-              <LogoutButton className="rounded border border-zinc-300 px-2 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50" />
+              <LogoutButton className={logoutButtonClass} />
             </div>
           </div>
         ) : null}
