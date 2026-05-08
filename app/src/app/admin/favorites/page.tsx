@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FavoriteListsManager } from "@/components/admin/favorite-lists-manager";
 import { getSessionUser } from "@/lib/auth";
@@ -34,11 +33,6 @@ export default async function FavoritesPage() {
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-6 md:px-6">
-      <div className="mb-4">
-        <Link href="/artworks" className="text-sm text-zinc-600 underline">
-          Back to artworks
-        </Link>
-      </div>
       <h1 className="mb-4 text-2xl font-semibold">Favorite Lists</h1>
       <FavoriteListsManager
         initialLists={lists.map((list) => ({

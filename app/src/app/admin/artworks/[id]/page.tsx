@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AddToFavoriteModal } from "@/components/admin/add-to-favorite-modal";
 import { ArtworkForm } from "@/components/admin/artwork-form";
@@ -87,11 +86,6 @@ export default async function ArtworkDetailPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-6 md:px-6">
-      <div className="mb-4">
-        <Link href="/artworks" className="text-sm text-zinc-600 underline">
-          Back to artworks
-        </Link>
-      </div>
       <h1 className="mb-4 text-2xl font-semibold">
         {canEditArtwork ? "Edit Artwork" : "View Artwork"}
       </h1>

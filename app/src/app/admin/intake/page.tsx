@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BulkIntake } from "@/components/admin/bulk-intake";
 import { getSessionUser } from "@/lib/auth";
@@ -20,11 +19,6 @@ export default async function BulkIntakePage() {
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-6 md:px-6">
-      <div className="mb-4">
-        <Link href="/artworks" className="text-sm text-zinc-600 underline">
-          Back to artworks
-        </Link>
-      </div>
       <h1 className="mb-2 text-2xl font-semibold">Bulk Photo Intake</h1>
       <p className="mb-4 text-sm text-zinc-600">
         Select an artist, upload many photos, then open each created draft to add

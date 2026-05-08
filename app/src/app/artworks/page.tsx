@@ -5,11 +5,9 @@ import { displayLocation, displayMedium, displayTitle } from "@/lib/artwork-pres
 import { getSessionUser } from "@/lib/auth";
 import { LOCATION_PRESET_OPTIONS } from "@/lib/location-options";
 import { MEDIUM_PRESET_OPTIONS } from "@/lib/medium-options";
-import { canUser } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { resolveImageUrl } from "@/lib/uploads";
 import { AddToFavoriteModal } from "@/components/admin/add-to-favorite-modal";
-import { LogoutButton } from "@/components/admin/logout-button";
 
 function getSearchValue(
   value: string | string[] | undefined
@@ -30,9 +28,6 @@ export default async function ArtworksPage({
     redirect("/login");
   }
   const query = await searchParams;
-  const canCreateArtwork = canUser(user, "artwork:create");
-  const canManageArtists = canUser(user, "artist:create");
-  const canManageUsers = canUser(user, "user:manage");
   const selectedArtistId = getSearchValue(query.artistId).trim();
   const selectedMediumPreset = getSearchValue(query.mediumPreset).trim();
   const selectedLocationPreset = getSearchValue(query.locationPreset).trim();
@@ -149,39 +144,8 @@ export default async function ArtworksPage({
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 md:px-6">
-      <header className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Artworks</h1>
-          <p className="text-sm text-zinc-600">
-            {user.email} ({user.role})
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/admin/favorites" className="rounded border px-3 py-2 text-sm">
-            Favorites
-          </Link>
-          {canCreateArtwork ? (
-            <>
-              <Link href="/admin/artworks/new" className="rounded bg-black px-3 py-2 text-sm text-white">
-                New Artwork
-              </Link>
-              <Link href="/admin/intake" className="rounded border px-3 py-2 text-sm">
-                Bulk Intake
-              </Link>
-            </>
-          ) : null}
-          {canManageArtists ? (
-            <Link href="/admin/artists" className="rounded border px-3 py-2 text-sm">
-              Artists
-            </Link>
-          ) : null}
-          {canManageUsers ? (
-            <Link href="/admin/users" className="rounded border px-3 py-2 text-sm">
-              Users
-            </Link>
-          ) : null}
-          <LogoutButton />
-        </div>
+      <header className="mb-6">
+        <h1 className="text-2xl font-semibold">Artworks</h1>
       </header>
 
       <form method="GET" className="mb-4 rounded-lg border p-3">
@@ -294,22 +258,22 @@ export default async function ArtworksPage({
         </div>
       ) : (
         <>
-          <div className="grid gap-3">
+          <div className="grid min-w-0 grid-cols-1 gap-3">
             {artworks.map((artwork) => (
               <div key={artwork.id} className="rounded-lg border p-3">
-                <div className="flex items-center gap-4">
+                <div className="flex w-full min-w-0 flex-col gap-3 md:flex-row md:items-center md:gap-4">
                   <Link
                     href={`/admin/artworks/${artwork.id}`}
-                    className="flex min-w-0 flex-1 items-center gap-4"
+                    className="flex w-full min-w-0 flex-1 flex-col gap-2 md:flex-row md:items-center md:gap-4"
                   >
                     {artwork.images[0] ? (
                       <img
                         src={cardImages.get(artwork.id) ?? artwork.images[0].url}
                         alt={artwork.title ?? "Artwork image"}
-                        className="h-16 w-16 rounded object-cover"
+                        className="h-16 w-16 shrink-0 rounded object-cover"
                       />
                     ) : (
-                      <div className="h-16 w-16 rounded bg-zinc-100" />
+                      <div className="h-16 w-16 shrink-0 rounded bg-zinc-100" />
                     )}
                     <div className="min-w-0 flex-1">
                       {artwork.title ? (
@@ -337,23 +301,26 @@ export default async function ArtworksPage({
                         </p>
                       ) : null}
                     </div>
-                    <p className="text-xs uppercase tracking-wide text-zinc-500">
+                    <p className="self-start text-xs uppercase tracking-wide text-zinc-500 md:self-auto">
                       {artwork.status}
                     </p>
                   </Link>
                   <AddToFavoriteModal
                     artworkId={artwork.id}
-                    triggerClassName="rounded border px-3 py-2 text-xs"
+                    triggerClassName="w-full rounded border px-3 py-2 text-xs md:w-auto"
                   />
                 </div>
               </div>
             ))}
           </div>
-          <div className="mt-4 flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
-            <span className="text-zinc-600">
+          <div className="mt-4 flex flex-col gap-2 rounded-lg border px-3 py-2 text-sm md:flex-row md:items-center md:justify-between">
+            <span className="text-zinc-600 md:hidden">
+              Page {page}/{totalPages} ({total})
+            </span>
+            <span className="hidden text-zinc-600 md:inline">
               Page {page} of {totalPages} ({total} total)
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-start md:self-auto">
               {page > 1 ? (
                 <Link href={previousPageHref} className="rounded border px-3 py-1">
                   Previous
