@@ -3,11 +3,10 @@ import { redirect } from "next/navigation";
 import { Prisma } from "@/generated/prisma/client";
 import { displayLocation, displayMedium, displayTitle } from "@/lib/artwork-presenter";
 import { getSessionUser } from "@/lib/auth";
-import { LOCATION_PRESET_OPTIONS } from "@/lib/location-options";
-import { MEDIUM_PRESET_OPTIONS } from "@/lib/medium-options";
 import { prisma } from "@/lib/prisma";
 import { resolveImageUrl } from "@/lib/uploads";
 import { AddToFavoriteModal } from "@/components/admin/add-to-favorite-modal";
+import { ArtworksFilters } from "@/components/admin/artworks-filters";
 
 function getSearchValue(
   value: string | string[] | undefined
@@ -70,6 +69,14 @@ export default async function ArtworksPage({
     selectedLocationPreset.length > 0 ||
     locationCustomQuery.length > 0 ||
     showFramed !== showUnframed;
+  const filtersStateKey = [
+    selectedArtistId,
+    selectedMediumPreset,
+    selectedLocationPreset,
+    locationCustomQuery,
+    showFramed ? "1" : "0",
+    showUnframed ? "1" : "0",
+  ].join("|");
 
   const [artists, total] = await Promise.all([
     prisma.artist.findMany({
@@ -148,107 +155,16 @@ export default async function ArtworksPage({
         <h1 className="text-2xl font-semibold">Artworks</h1>
       </header>
 
-      <form method="GET" className="mb-4 rounded-lg border p-3">
-        <div className="grid gap-3 md:grid-cols-5">
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-zinc-700">
-              Artist
-            </span>
-            <select
-              name="artistId"
-              className="w-full rounded border px-3 py-2 text-sm"
-              defaultValue={selectedArtistId}
-            >
-              <option value="">All artists</option>
-              {artists.map((artist) => (
-                <option key={artist.id} value={artist.id}>
-                  {artist.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-zinc-700">
-              Medium & Support
-            </span>
-            <select
-              name="mediumPreset"
-              className="w-full rounded border px-3 py-2 text-sm"
-              defaultValue={selectedMediumPreset}
-            >
-              <option value="">All media</option>
-              {MEDIUM_PRESET_OPTIONS.map((medium) => (
-                <option key={medium} value={medium}>
-                  {medium}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-zinc-700">
-              Location
-            </span>
-            <select
-              name="locationPreset"
-              className="w-full rounded border px-3 py-2 text-sm"
-              defaultValue={selectedLocationPreset}
-            >
-              <option value="">All locations</option>
-              {LOCATION_PRESET_OPTIONS.map((location) => (
-                <option key={location} value={location}>
-                  {location}
-                </option>
-              ))}
-            </select>
-            <input
-              name="locationCustom"
-              className="mt-2 w-full rounded border px-3 py-2 text-sm"
-              defaultValue={locationCustomQuery}
-              placeholder="Custom location contains..."
-            />
-          </label>
-
-          <div className="block">
-            <span className="mb-1 block text-xs font-medium text-zinc-700">
-              Framing
-            </span>
-            <div className="flex items-center gap-3 rounded border px-3 py-2 text-sm">
-              <label className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  name="showFramed"
-                  value="1"
-                  defaultChecked={showFramed}
-                />
-                Framed
-              </label>
-              <label className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  name="showUnframed"
-                  value="1"
-                  defaultChecked={showUnframed}
-                />
-                Unframed
-              </label>
-            </div>
-          </div>
-
-          <div className="flex items-end gap-2">
-            <button
-              type="submit"
-              className="rounded bg-black px-3 py-2 text-sm text-white"
-            >
-              Apply Filters
-            </button>
-            <Link href="/artworks" className="rounded border px-3 py-2 text-sm">
-              Clear
-            </Link>
-          </div>
-        </div>
-      </form>
+      <ArtworksFilters
+        key={filtersStateKey}
+        artists={artists}
+        selectedArtistId={selectedArtistId}
+        selectedMediumPreset={selectedMediumPreset}
+        selectedLocationPreset={selectedLocationPreset}
+        locationCustomQuery={locationCustomQuery}
+        showFramed={showFramed}
+        showUnframed={showUnframed}
+      />
 
       {artworks.length === 0 ? (
         <div className="rounded-lg border p-6 text-zinc-600">
