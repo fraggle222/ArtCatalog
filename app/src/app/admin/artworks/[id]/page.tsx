@@ -43,10 +43,14 @@ export default async function ArtworkDetailPage({
 
   const resolvedImages = await Promise.all(
     artwork.images.map(async (image) => ({
+      url: await resolveImageUrl(image.storageKey, image.url),
+      thumbnail_url:
+        image.thumbnailStorageKey && image.thumbnailUrl
+          ? await resolveImageUrl(image.thumbnailStorageKey, image.thumbnailUrl)
+          : await resolveImageUrl(image.storageKey, image.url),
       id: image.id,
       artwork_id: image.artworkId,
       storage_key: image.storageKey,
-      url: await resolveImageUrl(image.storageKey, image.url),
       sort_order: image.sortOrder,
       is_primary: image.isPrimary,
       created_at: image.createdAt.toISOString(),

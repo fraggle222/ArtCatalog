@@ -109,15 +109,17 @@ model Artist {
 }
 
 model ArtworkImage {
-  id         String   @id @db.Char(36)
-  artworkId  String   @map("artwork_id") @db.Char(36)
-  storageKey String   @map("storage_key") @db.VarChar(512)
-  url        String   @db.VarChar(1024)
-  sortOrder  Int      @map("sort_order") @default(0)
-  isPrimary  Boolean  @map("is_primary") @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  artwork    Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  id                  String   @id @db.Char(36)
+  artworkId           String   @map("artwork_id") @db.Char(36)
+  storageKey          String   @map("storage_key") @db.VarChar(512)
+  url                 String   @db.VarChar(1024)
+  thumbnailStorageKey String?  @map("thumbnail_storage_key") @db.VarChar(512)
+  thumbnailUrl        String?  @map("thumbnail_url") @db.VarChar(1024)
+  sortOrder           Int      @map("sort_order") @default(0)
+  isPrimary           Boolean  @map("is_primary") @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  artwork             Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
 
   @@index([artworkId], map: "artwork_images_artwork_id_idx")
   @@map("artwork_images")

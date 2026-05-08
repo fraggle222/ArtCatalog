@@ -25,7 +25,12 @@ export async function DELETE(
   }
 
   await prisma.artworkImage.delete({ where: { id: imageId } });
-  await deleteStoredImage(image.storageKey);
+  await Promise.all([
+    deleteStoredImage(image.storageKey),
+    image.thumbnailStorageKey
+      ? deleteStoredImage(image.thumbnailStorageKey)
+      : Promise.resolve(),
+  ]);
 
   const remaining = await prisma.artworkImage.findMany({
     where: { artworkId: id },

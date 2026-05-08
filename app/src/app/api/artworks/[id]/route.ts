@@ -39,10 +39,14 @@ export async function GET(
     ...mapArtworkBase(artwork),
     images: await Promise.all(
       artwork.images.map(async (image) => ({
+        url: await resolveImageUrl(image.storageKey, image.url),
+        thumbnail_url:
+          image.thumbnailStorageKey && image.thumbnailUrl
+            ? await resolveImageUrl(image.thumbnailStorageKey, image.thumbnailUrl)
+            : await resolveImageUrl(image.storageKey, image.url),
         id: image.id,
         artwork_id: image.artworkId,
         storage_key: image.storageKey,
-        url: await resolveImageUrl(image.storageKey, image.url),
         sort_order: image.sortOrder,
         is_primary: image.isPrimary,
         created_at: image.createdAt.toISOString(),
@@ -181,11 +185,18 @@ export async function DELETE(
   try {
     const images = await prisma.artworkImage.findMany({
       where: { artworkId: id },
-      select: { storageKey: true },
+      select: { storageKey: true, thumbnailStorageKey: true },
     });
 
     await prisma.artwork.delete({ where: { id } });
-    await Promise.all(images.map((image) => deleteStoredImage(image.storageKey)));
+    await Promise.all(
+      images.flatMap((image) => [
+        deleteStoredImage(image.storageKey),
+        image.thumbnailStorageKey
+          ? deleteStoredImage(image.thumbnailStorageKey)
+          : Promise.resolve(),
+      ])
+    );
     return ok({ success: true });
   } catch {
     return apiError("NOT_FOUND", "Artwork not found.", 404);

@@ -12,6 +12,13 @@ import {
 
 const allowedMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
+type StoredImage = {
+  storageKey: string;
+  url: string;
+  thumbnailStorageKey: string;
+  thumbnailUrl: string;
+};
+
 function getUploadDirAbsolute() {
   return path.resolve(process.cwd(), env.uploadDir);
 }
@@ -24,7 +31,7 @@ function toPublicUrl(fileName: string) {
   return `/${publicPath}/${fileName}`;
 }
 
-export async function storeUploadedImage(file: File) {
+export async function storeUploadedImage(file: File): Promise<StoredImage> {
   if (!allowedMimeTypes.has(file.type)) {
     throw new Error("Unsupported image type.");
   }
@@ -37,24 +44,37 @@ export async function storeUploadedImage(file: File) {
     .resize(2000, 2000, { fit: "inside", withoutEnlargement: true })
     .jpeg({ quality: 82 })
     .toBuffer();
+  const thumbnailBuffer = await sharp(input)
+    .rotate()
+    .resize(320, 320, { fit: "cover", withoutEnlargement: false })
+    .jpeg({ quality: 72 })
+    .toBuffer();
 
-  const fileName = `${randomUUID()}.jpg`;
+  const fileStem = randomUUID();
+  const fileName = `${fileStem}.jpg`;
+  const thumbnailFileName = `${fileStem}_thumb.jpg`;
 
   if (env.storageMode === "r2") {
     await uploadBufferToR2(fileName, outputBuffer, "image/jpeg");
+    await uploadBufferToR2(thumbnailFileName, thumbnailBuffer, "image/jpeg");
     return {
       storageKey: fileName,
       url: r2PlaceholderUrl(fileName),
+      thumbnailStorageKey: thumbnailFileName,
+      thumbnailUrl: r2PlaceholderUrl(thumbnailFileName),
     };
   }
 
   const targetDir = getUploadDirAbsolute();
   await mkdir(targetDir, { recursive: true });
   await writeFile(path.join(targetDir, fileName), outputBuffer);
+  await writeFile(path.join(targetDir, thumbnailFileName), thumbnailBuffer);
 
   return {
     storageKey: fileName,
     url: toPublicUrl(fileName),
+    thumbnailStorageKey: thumbnailFileName,
+    thumbnailUrl: toPublicUrl(thumbnailFileName),
   };
 }
 

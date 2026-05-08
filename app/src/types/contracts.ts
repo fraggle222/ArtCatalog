@@ -15,6 +15,7 @@ export interface ArtworkImage {
   artwork_id: string;
   storage_key: string;
   url: string;
+  thumbnail_url: string;
   sort_order: number;
   is_primary: boolean;
   created_at: string;

@@ -48,10 +48,13 @@ export async function POST(req: Request) {
   }> = [];
 
   for (const file of files) {
-    let storedKeyForCleanup: string | null = null;
+    let storedKeysForCleanup: { full: string; thumbnail: string } | null = null;
     try {
       const stored = await storeUploadedImage(file);
-      storedKeyForCleanup = stored.storageKey;
+      storedKeysForCleanup = {
+        full: stored.storageKey,
+        thumbnail: stored.thumbnailStorageKey,
+      };
       const created = await prisma.$transaction(async (tx) => {
         const artwork = await tx.artwork.create({
           data: {
@@ -78,6 +81,8 @@ export async function POST(req: Request) {
             artworkId: artwork.id,
             storageKey: stored.storageKey,
             url: stored.url,
+            thumbnailStorageKey: stored.thumbnailStorageKey,
+            thumbnailUrl: stored.thumbnailUrl,
             sortOrder: 0,
             isPrimary: true,
           },
@@ -92,8 +97,11 @@ export async function POST(req: Request) {
         created_at: created.createdAt.toISOString(),
       });
     } catch {
-      if (storedKeyForCleanup) {
-        await deleteStoredImage(storedKeyForCleanup);
+      if (storedKeysForCleanup) {
+        await Promise.all([
+          deleteStoredImage(storedKeysForCleanup.full),
+          deleteStoredImage(storedKeysForCleanup.thumbnail),
+        ]);
       }
       return apiError(
         "VALIDATION_ERROR",

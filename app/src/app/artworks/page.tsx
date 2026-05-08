@@ -37,6 +37,11 @@ export default async function ArtworksPage({
   const selectedMediumPreset = getSearchValue(query.mediumPreset).trim();
   const selectedLocationPreset = getSearchValue(query.locationPreset).trim();
   const locationCustomQuery = getSearchValue(query.locationCustom).trim();
+  const requestedPage = Math.max(1, Number(getSearchValue(query.page)) || 1);
+  const pageSize = Math.min(
+    100,
+    Math.max(1, Number(getSearchValue(query.pageSize)) || 24)
+  );
   const showFramed = getSearchValue(query.showFramed) === "1";
   const showUnframed = getSearchValue(query.showUnframed) === "1";
   const where: Prisma.ArtworkWhereInput = {};
@@ -71,23 +76,62 @@ export default async function ArtworksPage({
     locationCustomQuery.length > 0 ||
     showFramed !== showUnframed;
 
-  const [artists, artworks] = await Promise.all([
+  const [artists, total] = await Promise.all([
     prisma.artist.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
-    prisma.artwork.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      include: {
-        artist: true,
-        images: {
-          orderBy: { sortOrder: "asc" },
-          take: 1,
-        },
-      },
-    }),
+    prisma.artwork.count({ where }),
   ]);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const page = Math.min(requestedPage, totalPages);
+  const artworks = await prisma.artwork.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+    include: {
+      artist: true,
+      images: {
+        orderBy: { sortOrder: "asc" },
+        take: 1,
+      },
+    },
+  });
+
+  function buildPageHref(nextPage: number) {
+    const params = new URLSearchParams();
+    if (selectedArtistId) {
+      params.set("artistId", selectedArtistId);
+    }
+    if (selectedMediumPreset) {
+      params.set("mediumPreset", selectedMediumPreset);
+    }
+    if (selectedLocationPreset) {
+      params.set("locationPreset", selectedLocationPreset);
+    }
+    if (locationCustomQuery) {
+      params.set("locationCustom", locationCustomQuery);
+    }
+    if (showFramed) {
+      params.set("showFramed", "1");
+    }
+    if (showUnframed) {
+      params.set("showUnframed", "1");
+    }
+    if (pageSize !== 24) {
+      params.set("pageSize", String(pageSize));
+    }
+    if (nextPage > 1) {
+      params.set("page", String(nextPage));
+    }
+    const queryString = params.toString();
+    return queryString ? `/artworks?${queryString}` : "/artworks";
+  }
+
+  const previousPageHref = buildPageHref(page - 1);
+  const nextPageHref = buildPageHref(page + 1);
+
   const cardImages = new Map<string, string>();
   await Promise.all(
     artworks.map(async (artwork) => {
@@ -95,7 +139,10 @@ export default async function ArtworksPage({
       if (!first) {
         return;
       }
-      const resolved = await resolveImageUrl(first.storageKey, first.url);
+      const resolved =
+        first.thumbnailStorageKey && first.thumbnailUrl
+          ? await resolveImageUrl(first.thumbnailStorageKey, first.thumbnailUrl)
+          : await resolveImageUrl(first.storageKey, first.url);
       cardImages.set(artwork.id, resolved);
     })
   );
@@ -246,61 +293,84 @@ export default async function ArtworksPage({
             : "No artworks yet. Create your first entry."}
         </div>
       ) : (
-        <div className="grid gap-3">
-          {artworks.map((artwork) => (
-            <div key={artwork.id} className="rounded-lg border p-3">
-              <div className="flex items-center gap-4">
-                <Link
-                  href={`/admin/artworks/${artwork.id}`}
-                  className="flex min-w-0 flex-1 items-center gap-4"
-                >
-                  {artwork.images[0] ? (
-                    <img
-                      src={cardImages.get(artwork.id) ?? artwork.images[0].url}
-                      alt={artwork.title ?? "Artwork image"}
-                      className="h-16 w-16 rounded object-cover"
-                    />
-                  ) : (
-                    <div className="h-16 w-16 rounded bg-zinc-100" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    {artwork.title ? (
-                      <p className="truncate font-medium">{displayTitle(artwork)}</p>
+        <>
+          <div className="grid gap-3">
+            {artworks.map((artwork) => (
+              <div key={artwork.id} className="rounded-lg border p-3">
+                <div className="flex items-center gap-4">
+                  <Link
+                    href={`/admin/artworks/${artwork.id}`}
+                    className="flex min-w-0 flex-1 items-center gap-4"
+                  >
+                    {artwork.images[0] ? (
+                      <img
+                        src={cardImages.get(artwork.id) ?? artwork.images[0].url}
+                        alt={artwork.title ?? "Artwork image"}
+                        className="h-16 w-16 rounded object-cover"
+                      />
                     ) : (
-                      <p className="truncate font-medium text-zinc-500">
-                        {displayTitle(artwork)}
-                      </p>
+                      <div className="h-16 w-16 rounded bg-zinc-100" />
                     )}
-                    <p className="truncate text-sm text-zinc-600">
-                      {artwork.artist?.name ?? artwork.artistName ?? "Unknown artist"}
-                    </p>
-                    <p className="truncate text-xs text-zinc-500">
-                      {displayMedium(artwork) ?? "Unknown medium"} •{" "}
-                      {displayLocation(artwork) ?? "Unknown location"} •{" "}
-                      {artwork.dimensionsUnknown
-                        ? "Unknown dimensions"
-                        : artwork.dimensionsText ?? "Unknown dimensions"}
-                      {" • "}
-                      {artwork.framed ? "Framed" : "Unframed"}
-                    </p>
-                    {!artwork.title && artwork.description ? (
-                      <p className="truncate text-sm text-zinc-500">
-                        {artwork.description}
+                    <div className="min-w-0 flex-1">
+                      {artwork.title ? (
+                        <p className="truncate font-medium">{displayTitle(artwork)}</p>
+                      ) : (
+                        <p className="truncate font-medium text-zinc-500">
+                          {displayTitle(artwork)}
+                        </p>
+                      )}
+                      <p className="truncate text-sm text-zinc-600">
+                        {artwork.artist?.name ?? artwork.artistName ?? "Unknown artist"}
                       </p>
-                    ) : null}
-                  </div>
-                  <p className="text-xs uppercase tracking-wide text-zinc-500">
-                    {artwork.status}
-                  </p>
-                </Link>
-                <AddToFavoriteModal
-                  artworkId={artwork.id}
-                  triggerClassName="rounded border px-3 py-2 text-xs"
-                />
+                      <p className="truncate text-xs text-zinc-500">
+                        {displayMedium(artwork) ?? "Unknown medium"} •{" "}
+                        {displayLocation(artwork) ?? "Unknown location"} •{" "}
+                        {artwork.dimensionsUnknown
+                          ? "Unknown dimensions"
+                          : artwork.dimensionsText ?? "Unknown dimensions"}
+                        {" • "}
+                        {artwork.framed ? "Framed" : "Unframed"}
+                      </p>
+                      {!artwork.title && artwork.description ? (
+                        <p className="truncate text-sm text-zinc-500">
+                          {artwork.description}
+                        </p>
+                      ) : null}
+                    </div>
+                    <p className="text-xs uppercase tracking-wide text-zinc-500">
+                      {artwork.status}
+                    </p>
+                  </Link>
+                  <AddToFavoriteModal
+                    artworkId={artwork.id}
+                    triggerClassName="rounded border px-3 py-2 text-xs"
+                  />
+                </div>
               </div>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+            <span className="text-zinc-600">
+              Page {page} of {totalPages} ({total} total)
+            </span>
+            <div className="flex items-center gap-2">
+              {page > 1 ? (
+                <Link href={previousPageHref} className="rounded border px-3 py-1">
+                  Previous
+                </Link>
+              ) : (
+                <span className="rounded border px-3 py-1 text-zinc-400">Previous</span>
+              )}
+              {page < totalPages ? (
+                <Link href={nextPageHref} className="rounded border px-3 py-1">
+                  Next
+                </Link>
+              ) : (
+                <span className="rounded border px-3 py-1 text-zinc-400">Next</span>
+              )}
             </div>
-          ))}
-        </div>
+          </div>
+        </>
       )}
     </main>
   );

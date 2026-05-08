@@ -43,7 +43,12 @@ export async function POST(
       continue;
     }
 
-    let stored: { storageKey: string; url: string };
+    let stored: {
+      storageKey: string;
+      url: string;
+      thumbnailStorageKey: string;
+      thumbnailUrl: string;
+    };
     try {
       stored = await storeUploadedImage(file);
     } catch {
@@ -60,6 +65,8 @@ export async function POST(
         artworkId: id,
         storageKey: stored.storageKey,
         url: stored.url,
+        thumbnailStorageKey: stored.thumbnailStorageKey,
+        thumbnailUrl: stored.thumbnailUrl,
         sortOrder: existingCount + index,
         isPrimary: existingCount === 0 && index === 0,
       },
@@ -71,10 +78,17 @@ export async function POST(
     {
       images: await Promise.all(
         createdImages.map(async (image) => ({
+          url: await resolveImageUrl(image.storageKey, image.url),
+          thumbnail_url:
+            image.thumbnailStorageKey && image.thumbnailUrl
+              ? await resolveImageUrl(
+                  image.thumbnailStorageKey,
+                  image.thumbnailUrl
+                )
+              : await resolveImageUrl(image.storageKey, image.url),
           id: image.id,
           artwork_id: image.artworkId,
           storage_key: image.storageKey,
-          url: await resolveImageUrl(image.storageKey, image.url),
           sort_order: image.sortOrder,
           is_primary: image.isPrimary,
           created_at: image.createdAt.toISOString(),
@@ -166,10 +180,14 @@ export async function PATCH(
   return ok({
     images: await Promise.all(
       images.map(async (image) => ({
+        url: await resolveImageUrl(image.storageKey, image.url),
+        thumbnail_url:
+          image.thumbnailStorageKey && image.thumbnailUrl
+            ? await resolveImageUrl(image.thumbnailStorageKey, image.thumbnailUrl)
+            : await resolveImageUrl(image.storageKey, image.url),
         id: image.id,
         artwork_id: image.artworkId,
         storage_key: image.storageKey,
-        url: await resolveImageUrl(image.storageKey, image.url),
         sort_order: image.sortOrder,
         is_primary: image.isPrimary,
         created_at: image.createdAt.toISOString(),
